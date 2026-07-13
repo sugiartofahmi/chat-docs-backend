@@ -41,6 +41,8 @@ import (
 	redisInterfaces "go-service/infrastructure/redis/interfaces"
 	redisServices "go-service/infrastructure/redis/services"
 
+	"github.com/opensearch-project/opensearch-go/v4/opensearchapi"
+
 	"go-service/migration"
 	"go-service/seeder"
 )
@@ -101,9 +103,19 @@ func initializeSingleton() {
 		panic(err)
 	}
 
+	var opensearch *opensearchapi.Client
+	if config.OpensearchHost != "" && config.OpensearchPassword != "" {
+		opensearch, err = databases.NewOpenSearchConnection()
+		if err != nil {
+			log.Printf("warn: opensearch connection failed: %v", err)
+		}
+	} else {
+		log.Println("opensearch skipped: OPENSEARCH_HOST or OPENSEARCH_PASSWORD not set")
+	}
+
 	httpClient := integrations.NewHttpClient()
 
-	singleton.Init(httpClient, db, redis)
+	singleton.Init(httpClient, db, redis, opensearch)
 	redisCache = redisServices.NewRedisCacheService(redis)
 
 	log.Println("singletons initialized")
