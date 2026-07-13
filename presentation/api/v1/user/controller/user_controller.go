@@ -27,8 +27,8 @@ func NewUserController(router *gin.Engine, userService userInterfaces.UserServic
 	)
 	userRoute.GET("", controller.Pagination())
 	userRoute.GET("/:id", controller.Detail())
-	userRoute.POST("", controller.Create())
-	userRoute.PUT("/:id", controller.Update())
+	userRoute.POST("", middlewares.ValidateRequestJson[dtos.UserCreateRequestDto](), controller.Create())
+	userRoute.PUT("/:id", middlewares.ValidateRequestJson[dtos.UserUpdateRequestDto](), controller.Update())
 	userRoute.DELETE("/:id", controller.Delete())
 }
 
@@ -57,7 +57,7 @@ func (c *UserController) Detail() gin.HandlerFunc {
 func (c *UserController) Create() gin.HandlerFunc {
 	return func(httpContext *gin.Context) {
 		ctx := httpContext.Request.Context()
-		dto := dtos.AssignUserCreateRequestDto(httpContext)
+		dto := httpContext.MustGet(middlewares.RequestBodyJsonKey).(*dtos.UserCreateRequestDto)
 		result := dtos.UserResponseDtoFromEntity(c.userService.Create(ctx, dto))
 		response := utils.SuccessResponse(http.StatusCreated, userConstants.USER_CREATE_SUCCESS, result)
 		httpContext.JSON(http.StatusCreated, response)
@@ -68,7 +68,7 @@ func (c *UserController) Update() gin.HandlerFunc {
 	return func(httpContext *gin.Context) {
 		ctx := httpContext.Request.Context()
 		id := validators.ValidateUUID(httpContext.Param("id"))
-		dto := dtos.AssignUserUpdateRequestDto(httpContext)
+		dto := httpContext.MustGet(middlewares.RequestBodyJsonKey).(*dtos.UserUpdateRequestDto)
 		result := dtos.UserResponseDtoFromEntity(c.userService.Update(ctx, id, dto))
 		response := utils.SuccessResponse(http.StatusOK, userConstants.USER_UPDATE_SUCCESS, result)
 		httpContext.JSON(http.StatusOK, response)

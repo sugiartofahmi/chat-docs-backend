@@ -9,8 +9,6 @@ import (
 	"go-service/infrastructure/utils"
 )
 
-const AuthUserKey = "user"
-
 func AuthorizationMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -20,7 +18,7 @@ func AuthorizationMiddleware() gin.HandlerFunc {
 
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 		claims := utils.ValidateToken(token)
-		c.Set(AuthUserKey, claims.User)
+		c.Set(utils.AuthUserKey, claims.User)
 		c.Next()
 	}
 }

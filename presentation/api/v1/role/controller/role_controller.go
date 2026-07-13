@@ -26,8 +26,8 @@ func NewRoleController(router *gin.Engine, roleService roleInterfaces.RoleServic
 	)
 	roleRoute.GET("", controller.Pagination())
 	roleRoute.GET("/:id", controller.Detail())
-	roleRoute.POST("", controller.Create())
-	roleRoute.PUT("/:id", controller.Update())
+	roleRoute.POST("", middlewares.ValidateRequestJson[dtos.RoleCreateRequestDto](), controller.Create())
+	roleRoute.PUT("/:id", middlewares.ValidateRequestJson[dtos.RoleUpdateRequestDto](), controller.Update())
 	roleRoute.DELETE("/:id", controller.Delete())
 }
 
@@ -56,7 +56,7 @@ func (c *RoleController) Detail() gin.HandlerFunc {
 func (c *RoleController) Create() gin.HandlerFunc {
 	return func(httpContext *gin.Context) {
 		ctx := httpContext.Request.Context()
-		dto := dtos.AssignRoleCreateRequestDto(httpContext)
+		dto := httpContext.MustGet(middlewares.RequestBodyJsonKey).(*dtos.RoleCreateRequestDto)
 		result := dtos.RoleResponseDtoFromEntity(c.roleService.Create(ctx, dto))
 		response := utils.SuccessResponse(http.StatusCreated, constants.ROLE_CREATE_SUCCESS, result)
 		httpContext.JSON(http.StatusCreated, response)
@@ -67,7 +67,7 @@ func (c *RoleController) Update() gin.HandlerFunc {
 	return func(httpContext *gin.Context) {
 		ctx := httpContext.Request.Context()
 		id := validators.ValidateUUID(httpContext.Param("id"))
-		dto := dtos.AssignRoleUpdateRequestDto(httpContext)
+		dto := httpContext.MustGet(middlewares.RequestBodyJsonKey).(*dtos.RoleUpdateRequestDto)
 		result := dtos.RoleResponseDtoFromEntity(c.roleService.Update(ctx, id, dto))
 		response := utils.SuccessResponse(http.StatusOK, constants.ROLE_UPDATE_SUCCESS, result)
 		httpContext.JSON(http.StatusOK, response)
