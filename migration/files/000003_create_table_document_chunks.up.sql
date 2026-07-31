@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS public.document_chunks (
     document_id uuid                                   NOT NULL,
     chunk_index int                                    NOT NULL,
     content     text                                   NOT NULL,
-    embedding   vector(1536)                           NOT NULL,
+    embedding   vector(1536),
     created_at  timestamptz DEFAULT CURRENT_TIMESTAMP,
     updated_at  timestamptz DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT document_chunks_pkey        PRIMARY KEY (id),
