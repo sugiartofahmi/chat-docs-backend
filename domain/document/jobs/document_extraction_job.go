@@ -28,7 +28,7 @@ func (j *DocumentExtractionJob) Handle(payload []byte) (err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			j.documentExtractionService.MarkFailed(context.Background(), data.DocumentId)
+			j.documentExtractionService.MarkFailed(context.Background(), data.DocumentId, fmt.Sprintf("%v", r))
 			err = fmt.Errorf("%v", r)
 		}
 	}()

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	documentConstants "go-service/domain/document/constants"
 	documentInterfaces "go-service/domain/document/interfaces"
 	"go-service/entities"
 	"go-service/infrastructure/exceptions"
@@ -49,6 +50,22 @@ func (repo *DocumentStoreRepository) UpdateStatus(ctx context.Context, id uuid.U
 	entity := &entities.DocumentEntity{Id: id, Status: status}
 	if err := query.Where("id = ?", id).Update("status", status).Error; err != nil {
 		log.Println("Error update document status:", err)
+		panic(*exceptions.ServerErrorException(err))
+	}
+
+	return entity
+}
+
+func (repo *DocumentStoreRepository) MarkFailed(ctx context.Context, id uuid.UUID, errorMessage string) *entities.DocumentEntity {
+	query := repo.documentModel.WithContext(ctx)
+
+	entity := &entities.DocumentEntity{Id: id, Status: documentConstants.DOCUMENT_STATUS_FAILED, ErrorMessage: &errorMessage}
+	updates := map[string]any{
+		"status":        documentConstants.DOCUMENT_STATUS_FAILED,
+		"error_message": errorMessage,
+	}
+	if err := query.Where("id = ?", id).Updates(updates).Error; err != nil {
+		log.Println("Error mark document failed:", err)
 		panic(*exceptions.ServerErrorException(err))
 	}
 

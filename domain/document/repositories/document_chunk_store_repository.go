@@ -54,3 +54,12 @@ func (repo *DocumentChunkStoreRepository) UpdateEmbedding(ctx context.Context, i
 
 	return entity
 }
+
+func (repo *DocumentChunkStoreRepository) MarkFailed(ctx context.Context, documentId uuid.UUID, errorMessage string) {
+	query := repo.documentChunkModel.WithContext(ctx)
+
+	if err := query.Where("document_id = ? AND embedding IS NULL", documentId).Update("error_message", errorMessage).Error; err != nil {
+		log.Println("Error mark document chunks failed:", err)
+		panic(*exceptions.ServerErrorException(err))
+	}
+}

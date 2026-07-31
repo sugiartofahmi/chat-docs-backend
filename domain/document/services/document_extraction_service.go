@@ -54,8 +54,12 @@ func NewDocumentExtractionService(
 // without embeddings yet, then delegates the embedding stage as its own job.
 func (s *DocumentExtractionService) Extract(ctx context.Context, documentId uuid.UUID, fileBuffer []byte) {
 	text, err := pdfparser.ExtractText(fileBuffer)
-	if err != nil || strings.TrimSpace(text) == "" {
-		s.MarkFailed(ctx, documentId)
+	if err != nil {
+		s.MarkFailed(ctx, documentId, err.Error())
+		return
+	}
+	if strings.TrimSpace(text) == "" {
+		s.MarkFailed(ctx, documentId, documentConstants.DOCUMENT_EMPTY_TEXT)
 		return
 	}
 
@@ -64,7 +68,7 @@ func (s *DocumentExtractionService) Extract(ctx context.Context, documentId uuid
 	// the model later means revisiting both.
 	chunks := textchunk.Chunk(text, documentConstants.CHUNK_SIZE, documentConstants.CHUNK_OVERLAP)
 	if len(chunks) == 0 {
-		s.MarkFailed(ctx, documentId)
+		s.MarkFailed(ctx, documentId, documentConstants.DOCUMENT_CHUNK_EMPTY)
 		return
 	}
 
@@ -88,7 +92,7 @@ func (s *DocumentExtractionService) Extract(ctx context.Context, documentId uuid
 func (s *DocumentExtractionService) EmbedAndStore(ctx context.Context, documentId uuid.UUID) {
 	chunks := s.documentChunkQueryRepository.FindByDocumentId(ctx, documentId)
 	if len(chunks) == 0 {
-		s.MarkFailed(ctx, documentId)
+		s.MarkFailed(ctx, documentId, documentConstants.DOCUMENT_NO_CHUNKS_TO_EMBED)
 		return
 	}
 
@@ -99,7 +103,7 @@ func (s *DocumentExtractionService) EmbedAndStore(ctx context.Context, documentI
 
 	embeddings, err := s.embedChunks(ctx, contents)
 	if err != nil {
-		s.MarkFailed(ctx, documentId)
+		s.MarkFailed(ctx, documentId, err.Error())
 		return
 	}
 
@@ -115,8 +119,9 @@ func (s *DocumentExtractionService) EmbedAndStore(ctx context.Context, documentI
 	})
 }
 
-func (s *DocumentExtractionService) MarkFailed(ctx context.Context, documentId uuid.UUID) {
-	s.documentStoreRepository.UpdateStatus(ctx, documentId, documentConstants.DOCUMENT_STATUS_FAILED)
+func (s *DocumentExtractionService) MarkFailed(ctx context.Context, documentId uuid.UUID, errorMessage string) {
+	s.documentStoreRepository.MarkFailed(ctx, documentId, errorMessage)
+	s.documentChunkStoreRepository.MarkFailed(ctx, documentId, errorMessage)
 }
 
 func (s *DocumentExtractionService) embedChunks(ctx context.Context, chunks []string) (embeddings [][]float32, err error) {
