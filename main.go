@@ -25,6 +25,7 @@ import (
 	projectServices "go-service/domain/project/services"
 
 	documentInterfaces "go-service/domain/document/interfaces"
+	documentJobs "go-service/domain/document/jobs"
 	documentRepositories "go-service/domain/document/repositories"
 	documentServices "go-service/domain/document/services"
 
@@ -49,20 +50,23 @@ import (
 )
 
 var (
-	router                  *gin.Engine
-	redisCache              redisInterfaces.RedisCacheInterface
-	projectQueryRepository  projectInterfaces.ProjectQueryRepositoryInterface
-	projectStoreRepository  projectInterfaces.ProjectStoreRepositoryInterface
-	projectService          projectInterfaces.ProjectServiceInterface
-	documentStoreRepository documentInterfaces.DocumentStoreRepositoryInterface
-	documentService         documentInterfaces.DocumentServiceInterface
-	openRouterService       openrouterInterfaces.OpenRouterServiceInterface
-	execMigration           *string
-	flagMigration           *string
-	migrationFileName       *string
-	autoMigrateFlag         *string
-	flagSeeder              *string
-	seederTarget            *string
+	router                       *gin.Engine
+	redisCache                   redisInterfaces.RedisCacheInterface
+	projectQueryRepository       projectInterfaces.ProjectQueryRepositoryInterface
+	projectStoreRepository       projectInterfaces.ProjectStoreRepositoryInterface
+	projectService               projectInterfaces.ProjectServiceInterface
+	documentStoreRepository      documentInterfaces.DocumentStoreRepositoryInterface
+	documentChunkStoreRepository documentInterfaces.DocumentChunkStoreRepositoryInterface
+	documentChunkQueryRepository documentInterfaces.DocumentChunkQueryRepositoryInterface
+	documentExtractionService    documentInterfaces.DocumentExtractionServiceInterface
+	documentService              documentInterfaces.DocumentServiceInterface
+	openRouterService            openrouterInterfaces.OpenRouterServiceInterface
+	execMigration                *string
+	flagMigration                *string
+	migrationFileName            *string
+	autoMigrateFlag              *string
+	flagSeeder                   *string
+	seederTarget                 *string
 )
 
 func main() {
@@ -195,13 +199,28 @@ func initializeRepositories() {
 	projectQueryRepository = projectRepositories.NewProjectQueryRepository(singleton.PostgresSingleton())
 	projectStoreRepository = projectRepositories.NewProjectStoreRepository(singleton.PostgresSingleton())
 	documentStoreRepository = documentRepositories.NewDocumentStoreRepository(singleton.PostgresSingleton())
+	documentChunkStoreRepository = documentRepositories.NewDocumentChunkStoreRepository(singleton.PostgresSingleton())
+	documentChunkQueryRepository = documentRepositories.NewDocumentChunkQueryRepository(singleton.PostgresSingleton())
 	log.Println("repositories initialized")
 }
 
 func initializeServices() {
 	projectService = projectServices.NewProjectService(projectQueryRepository, projectStoreRepository)
 	openRouterService = openrouterServices.NewOpenRouterService(singleton.HttpClientSingleton())
-	documentService = documentServices.NewDocumentService(documentStoreRepository, projectQueryRepository)
+
+	documentExtractionService = documentServices.NewDocumentExtractionService(
+		singleton.PostgresSingleton(),
+		documentStoreRepository,
+		documentChunkStoreRepository,
+		documentChunkQueryRepository,
+		openRouterService,
+		config.OpenRouterEmbeddingModel,
+		singleton.JobPoolSingleton(),
+	)
+	singleton.JobRegistrySingleton().Register(documentJobs.NewDocumentExtractionJob(documentExtractionService))
+	singleton.JobRegistrySingleton().Register(documentJobs.NewDocumentEmbeddingJob(documentExtractionService))
+
+	documentService = documentServices.NewDocumentService(documentStoreRepository, projectQueryRepository, singleton.JobPoolSingleton())
 	log.Println("services initialized")
 }
 

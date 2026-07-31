@@ -8,6 +8,7 @@ import (
 	"go-service/entities"
 	"go-service/infrastructure/exceptions"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -36,6 +37,18 @@ func (repo *DocumentStoreRepository) Create(ctx context.Context, entity *entitie
 	err := query.Create(entity).Error
 	if err != nil {
 		log.Println("Error create document:", err)
+		panic(*exceptions.ServerErrorException(err))
+	}
+
+	return entity
+}
+
+func (repo *DocumentStoreRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status string) *entities.DocumentEntity {
+	query := repo.documentModel.WithContext(ctx)
+
+	entity := &entities.DocumentEntity{Id: id, Status: status}
+	if err := query.Where("id = ?", id).Update("status", status).Error; err != nil {
+		log.Println("Error update document status:", err)
 		panic(*exceptions.ServerErrorException(err))
 	}
 

@@ -8,6 +8,7 @@ import (
 	projectInterfaces "go-service/domain/project/interfaces"
 	"go-service/entities"
 	"go-service/infrastructure/exceptions"
+	jobInterfaces "go-service/infrastructure/job/interfaces"
 
 	"github.com/google/uuid"
 )
@@ -15,15 +16,18 @@ import (
 type DocumentService struct {
 	documentStoreRepository documentInterfaces.DocumentStoreRepositoryInterface
 	projectQueryRepository  projectInterfaces.ProjectQueryRepositoryInterface
+	jobPool                 jobInterfaces.JobPoolInterface
 }
 
 func NewDocumentService(
 	documentStoreRepository documentInterfaces.DocumentStoreRepositoryInterface,
 	projectQueryRepository projectInterfaces.ProjectQueryRepositoryInterface,
+	jobPool jobInterfaces.JobPoolInterface,
 ) documentInterfaces.DocumentServiceInterface {
 	return &DocumentService{
 		documentStoreRepository: documentStoreRepository,
 		projectQueryRepository:  projectQueryRepository,
+		jobPool:                 jobPool,
 	}
 }
 
@@ -37,5 +41,12 @@ func (s *DocumentService) Upload(ctx context.Context, projectId uuid.UUID, filen
 		ProjectId: projectId,
 		Filename:  filename,
 	}
-	return s.documentStoreRepository.Create(ctx, entity)
+	document := s.documentStoreRepository.Create(ctx, entity)
+
+	s.jobPool.Delegate(documentConstants.DOCUMENT_EXTRACTION_JOB_NAME, documentInterfaces.DocumentExtractionJobPayload{
+		DocumentId: document.Id,
+		FileBuffer: fileBuffer,
+	})
+
+	return document
 }
