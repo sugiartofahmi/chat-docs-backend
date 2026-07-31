@@ -41,6 +41,9 @@ import (
 	redisInterfaces "go-service/infrastructure/redis/interfaces"
 	redisServices "go-service/infrastructure/redis/services"
 
+	openrouterInterfaces "go-service/infrastructure/openrouter/interfaces"
+	openrouterServices "go-service/infrastructure/openrouter/services"
+
 	"github.com/opensearch-project/opensearch-go/v4/opensearchapi"
 
 	"go-service/migration"
@@ -61,6 +64,7 @@ var (
 	authUserStoreRepository     authInterfaces.AuthUserStoreRepositoryInterface
 	authRoleQueryRepository     authInterfaces.AuthRoleQueryRepositoryInterface
 	authService                 authInterfaces.AuthServiceInterface
+	openRouterService           openrouterInterfaces.OpenRouterServiceInterface
 	execMigration               *string
 	flagMigration               *string
 	migrationFileName           *string
@@ -203,6 +207,7 @@ func initializeServices() {
 	userService = userServices.NewUserService(userQueryRepository, userStoreRepository, userRoleQueryRepository)
 	roleService = roleServices.NewRoleService(roleQueryRepository, roleStoreRepository)
 	authService = authServices.NewAuthService(authUserQueryRepository, authUserStoreRepository, authRoleQueryRepository)
+	openRouterService = openrouterServices.NewOpenRouterService(singleton.HttpClientSingleton())
 	log.Println("services initialized")
 }
 
