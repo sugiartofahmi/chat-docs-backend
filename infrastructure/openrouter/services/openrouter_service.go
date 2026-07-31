@@ -47,3 +47,29 @@ func (s *OpenRouterService) CreateEmbedding(_ context.Context, dto *dtos.Embeddi
 	}
 	return &response
 }
+
+func (s *OpenRouterService) CreateChatCompletion(_ context.Context, dto *dtos.ChatCompletionRequestDto) *dtos.ChatCompletionResponseDto {
+	s.httpClient.SetHeaders(map[string]string{"Authorization": fmt.Sprintf("Bearer %s", config.OpenRouterAPIKey)})
+	if config.OpenRouterAppURL != "" {
+		s.httpClient.SetHeaders(map[string]string{"HTTP-Referer": config.OpenRouterAppURL})
+	}
+	if config.OpenRouterAppTitle != "" {
+		s.httpClient.SetHeaders(map[string]string{"X-Title": config.OpenRouterAppTitle})
+	}
+
+	body, err := json.Marshal(dto)
+	if err != nil {
+		panic(*exceptions.ServerErrorException(err))
+	}
+
+	respBody, err := s.httpClient.Post(config.OpenRouterBaseURL+constants.OpenRouterChatCompletionEndpoint, bytes.NewReader(body))
+	if err != nil {
+		panic(*exceptions.ServerErrorException(fmt.Errorf("%s: %w", constants.OpenRouterChatCompletionAPIError, err)))
+	}
+
+	var response dtos.ChatCompletionResponseDto
+	if err := json.Unmarshal(respBody, &response); err != nil {
+		panic(*exceptions.ServerErrorException(err))
+	}
+	return &response
+}

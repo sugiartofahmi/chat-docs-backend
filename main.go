@@ -29,7 +29,12 @@ import (
 	documentRepositories "go-service/domain/document/repositories"
 	documentServices "go-service/domain/document/services"
 
+	conversationInterfaces "go-service/domain/conversation/interfaces"
+	conversationRepositories "go-service/domain/conversation/repositories"
+	conversationServices "go-service/domain/conversation/services"
+
 	healthController "go-service/presentation/api/health/controller"
+	conversationController "go-service/presentation/api/v1/conversation/controller"
 	documentController "go-service/presentation/api/v1/document/controller"
 	projectController "go-service/presentation/api/v1/project/controller"
 
@@ -60,6 +65,9 @@ var (
 	documentChunkQueryRepository documentInterfaces.DocumentChunkQueryRepositoryInterface
 	documentExtractionService    documentInterfaces.DocumentExtractionServiceInterface
 	documentService              documentInterfaces.DocumentServiceInterface
+	conversationStoreRepository  conversationInterfaces.ConversationStoreRepositoryInterface
+	conversationQueryRepository  conversationInterfaces.ConversationQueryRepositoryInterface
+	conversationService          conversationInterfaces.ConversationServiceInterface
 	openRouterService            openrouterInterfaces.OpenRouterServiceInterface
 	execMigration                *string
 	flagMigration                *string
@@ -201,6 +209,8 @@ func initializeRepositories() {
 	documentStoreRepository = documentRepositories.NewDocumentStoreRepository(singleton.PostgresSingleton())
 	documentChunkStoreRepository = documentRepositories.NewDocumentChunkStoreRepository(singleton.PostgresSingleton())
 	documentChunkQueryRepository = documentRepositories.NewDocumentChunkQueryRepository(singleton.PostgresSingleton())
+	conversationStoreRepository = conversationRepositories.NewConversationStoreRepository(singleton.PostgresSingleton())
+	conversationQueryRepository = conversationRepositories.NewConversationQueryRepository(singleton.PostgresSingleton())
 	log.Println("repositories initialized")
 }
 
@@ -221,6 +231,16 @@ func initializeServices() {
 	singleton.JobRegistrySingleton().Register(documentJobs.NewDocumentEmbeddingJob(documentExtractionService))
 
 	documentService = documentServices.NewDocumentService(documentStoreRepository, projectQueryRepository, singleton.JobPoolSingleton())
+
+	conversationService = conversationServices.NewConversationService(
+		conversationStoreRepository,
+		conversationQueryRepository,
+		projectQueryRepository,
+		documentChunkQueryRepository,
+		openRouterService,
+		config.OpenRouterEmbeddingModel,
+		config.OpenRouterChatModel,
+	)
 	log.Println("services initialized")
 }
 
@@ -228,6 +248,7 @@ func initializeControllers() {
 	healthController.NewHealthController(router)
 	projectController.NewProjectController(router, projectService)
 	documentController.NewDocumentController(router, documentService)
+	conversationController.NewConversationController(router, conversationService)
 	log.Println("controllers initialized")
 }
 

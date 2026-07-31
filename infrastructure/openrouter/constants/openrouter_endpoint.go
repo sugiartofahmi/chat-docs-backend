@@ -1,5 +1,6 @@
 package constants
 
 const (
-	OpenRouterEmbeddingEndpoint = "/embeddings"
+	OpenRouterEmbeddingEndpoint      = "/embeddings"
+	OpenRouterChatCompletionEndpoint = "/chat/completions"
 )
