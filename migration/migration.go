@@ -19,6 +19,10 @@ func Run(db *gorm.DB, exec string) {
 		panic(err)
 	}
 
+	if err := db.Exec(`CREATE EXTENSION IF NOT EXISTS vector`).Error; err != nil {
+		panic(err)
+	}
+
 	sqlDB, err := db.DB()
 	if err != nil {
 		panic(err)

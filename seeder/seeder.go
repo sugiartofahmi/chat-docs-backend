@@ -7,11 +7,9 @@ import (
 )
 
 func Run(db *gorm.DB, seederCommands []string) error {
+	listSeeders := map[string]Seeder{}
+
 	if len(seederCommands) > 0 {
-		listSeeders := map[string]Seeder{
-			"RoleSeeder": NewRoleSeeder(),
-			"UserSeeder": NewUserSeeder(),
-		}
 		for _, name := range seederCommands {
 			s, ok := listSeeders[name]
 			if !ok {
@@ -23,18 +21,13 @@ func Run(db *gorm.DB, seederCommands []string) error {
 			}
 		}
 	} else {
-		db.Exec(`DELETE FROM users`)
-		db.Exec(`DELETE FROM roles`)
-
-		for _, s := range []Seeder{
-			NewRoleSeeder(),
-			NewUserSeeder(),
-		} {
+		for _, s := range listSeeders {
 			if err := s.Handle(db); err != nil {
 				return err
 			}
 		}
 	}
+
 	log.Println("Seeding completed!")
 	return nil
 }

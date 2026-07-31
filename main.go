@@ -20,22 +20,17 @@ import (
 	"go-service/infrastructure/middlewares"
 	"go-service/infrastructure/singleton"
 
-	userInterfaces "go-service/domain/user/interfaces"
-	userRepositories "go-service/domain/user/repositories"
-	userServices "go-service/domain/user/services"
+	projectInterfaces "go-service/domain/project/interfaces"
+	projectRepositories "go-service/domain/project/repositories"
+	projectServices "go-service/domain/project/services"
 
-	roleInterfaces "go-service/domain/role/interfaces"
-	roleRepositories "go-service/domain/role/repositories"
-	roleServices "go-service/domain/role/services"
-
-	authInterfaces "go-service/domain/auth/interfaces"
-	authRepositories "go-service/domain/auth/repositories"
-	authServices "go-service/domain/auth/services"
+	documentInterfaces "go-service/domain/document/interfaces"
+	documentRepositories "go-service/domain/document/repositories"
+	documentServices "go-service/domain/document/services"
 
 	healthController "go-service/presentation/api/health/controller"
-	roleController "go-service/presentation/api/v1/role/controller"
-	userController "go-service/presentation/api/v1/user/controller"
-	authController "go-service/presentation/api/v1/auth/controller"
+	documentController "go-service/presentation/api/v1/document/controller"
+	projectController "go-service/presentation/api/v1/project/controller"
 
 	redisFactory "go-service/infrastructure/redis/factories"
 	redisInterfaces "go-service/infrastructure/redis/interfaces"
@@ -51,26 +46,20 @@ import (
 )
 
 var (
-	router                       *gin.Engine
-	redisCache                  redisInterfaces.RedisCacheInterface
-	userQueryRepository         userInterfaces.UserQueryRepositoryInterface
-	userStoreRepository         userInterfaces.UserStoreRepositoryInterface
-	userRoleQueryRepository     userInterfaces.UserRoleQueryRepositoryInterface
-	userService                 userInterfaces.UserServiceInterface
-	roleQueryRepository         roleInterfaces.RoleQueryRepositoryInterface
-	roleStoreRepository         roleInterfaces.RoleStoreRepositoryInterface
-	roleService                 roleInterfaces.RoleServiceInterface
-	authUserQueryRepository     authInterfaces.AuthUserQueryRepositoryInterface
-	authUserStoreRepository     authInterfaces.AuthUserStoreRepositoryInterface
-	authRoleQueryRepository     authInterfaces.AuthRoleQueryRepositoryInterface
-	authService                 authInterfaces.AuthServiceInterface
-	openRouterService           openrouterInterfaces.OpenRouterServiceInterface
-	execMigration               *string
-	flagMigration               *string
-	migrationFileName           *string
-	autoMigrateFlag             *string
-	flagSeeder                 *string
-	seederTarget               *string
+	router                  *gin.Engine
+	redisCache              redisInterfaces.RedisCacheInterface
+	projectQueryRepository  projectInterfaces.ProjectQueryRepositoryInterface
+	projectStoreRepository  projectInterfaces.ProjectStoreRepositoryInterface
+	projectService          projectInterfaces.ProjectServiceInterface
+	documentStoreRepository documentInterfaces.DocumentStoreRepositoryInterface
+	documentService         documentInterfaces.DocumentServiceInterface
+	openRouterService       openrouterInterfaces.OpenRouterServiceInterface
+	execMigration           *string
+	flagMigration           *string
+	migrationFileName       *string
+	autoMigrateFlag         *string
+	flagSeeder              *string
+	seederTarget            *string
 )
 
 func main() {
@@ -192,30 +181,23 @@ func initializeSchedulers() {
 }
 
 func initializeRepositories() {
-	userQueryRepository         = userRepositories.NewUserQueryRepository(singleton.PostgresSingleton())
-	userStoreRepository         = userRepositories.NewUserStoreRepository(singleton.PostgresSingleton())
-	userRoleQueryRepository     = userRepositories.NewUserRoleQueryRepository(singleton.PostgresSingleton())
-	roleQueryRepository         = roleRepositories.NewRoleQueryRepository(singleton.PostgresSingleton())
-	roleStoreRepository         = roleRepositories.NewRoleStoreRepository(singleton.PostgresSingleton())
-	authUserQueryRepository     = authRepositories.NewAuthUserQueryRepository(singleton.PostgresSingleton())
-	authUserStoreRepository     = authRepositories.NewAuthUserStoreRepository(singleton.PostgresSingleton())
-	authRoleQueryRepository     = authRepositories.NewAuthRoleQueryRepository(singleton.PostgresSingleton())
+	projectQueryRepository = projectRepositories.NewProjectQueryRepository(singleton.PostgresSingleton())
+	projectStoreRepository = projectRepositories.NewProjectStoreRepository(singleton.PostgresSingleton())
+	documentStoreRepository = documentRepositories.NewDocumentStoreRepository(singleton.PostgresSingleton())
 	log.Println("repositories initialized")
 }
 
 func initializeServices() {
-	userService = userServices.NewUserService(userQueryRepository, userStoreRepository, userRoleQueryRepository)
-	roleService = roleServices.NewRoleService(roleQueryRepository, roleStoreRepository)
-	authService = authServices.NewAuthService(authUserQueryRepository, authUserStoreRepository, authRoleQueryRepository)
+	projectService = projectServices.NewProjectService(projectQueryRepository, projectStoreRepository)
 	openRouterService = openrouterServices.NewOpenRouterService(singleton.HttpClientSingleton())
+	documentService = documentServices.NewDocumentService(documentStoreRepository, projectQueryRepository)
 	log.Println("services initialized")
 }
 
 func initializeControllers() {
 	healthController.NewHealthController(router)
-	roleController.NewRoleController(router, roleService)
-	userController.NewUserController(router, userService)
-	authController.NewAuthController(router, authService)
+	projectController.NewProjectController(router, projectService)
+	documentController.NewDocumentController(router, documentService)
 	log.Println("controllers initialized")
 }
 

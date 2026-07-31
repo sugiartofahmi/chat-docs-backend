@@ -3,9 +3,9 @@ package singleton
 import (
 	"sync"
 
-	"go-service/infrastructure/integrations"
 	"github.com/opensearch-project/opensearch-go/v4/opensearchapi"
 	"github.com/redis/go-redis/v9"
+	"go-service/infrastructure/integrations"
 	"gorm.io/gorm"
 )
 
