@@ -19,5 +19,6 @@ func AutoMigrate(db *gorm.DB) error {
 		&entities.DocumentEntity{},
 		&entities.DocumentChunkEntity{},
 		&entities.ConversationEntity{},
+		&entities.JobEntity{},
 	)
 }

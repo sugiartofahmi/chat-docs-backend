@@ -39,6 +39,9 @@ import (
 	openrouterInterfaces "go-service/infrastructure/openrouter/interfaces"
 	openrouterServices "go-service/infrastructure/openrouter/services"
 
+	"go-service/infrastructure/job"
+	"go-service/infrastructure/scheduler"
+
 	"github.com/opensearch-project/opensearch-go/v4/opensearchapi"
 
 	"go-service/migration"
@@ -71,6 +74,8 @@ func main() {
 	initializeRouter()
 	initializeRepositories()
 	initializeServices()
+	initializeJobs()
+	initializeSchedulers()
 	initializeControllers()
 	initializeHttpServer()
 }
@@ -108,7 +113,11 @@ func initializeSingleton() {
 
 	httpClient := integrations.NewHttpClient()
 
-	singleton.Init(httpClient, db, redis, opensearch)
+	jobRegistry := job.NewJobRegistry()
+	jobPool := job.NewJobPool(jobRegistry, db)
+	scheduler := scheduler.NewScheduler(db)
+
+	singleton.Init(httpClient, db, redis, opensearch, jobRegistry, jobPool, scheduler)
 	redisCache = redisServices.NewRedisCacheService(redis)
 
 	log.Println("singletons initialized")
@@ -173,10 +182,12 @@ func runnerSeeder() {
 }
 
 func initializeJobs() {
+	singleton.JobPoolSingleton().Start(job.WorkerCount)
 	log.Println("jobs initialized")
 }
 
 func initializeSchedulers() {
+	singleton.SchedulerSingleton().Start()
 	log.Println("schedulers initialized")
 }
 
